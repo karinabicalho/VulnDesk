@@ -1,12 +1,26 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAppAuth } from "@/hooks/use-app-auth";
+import { EditDialog, DeleteButton, toOptions } from "@/components/crud-actions";
 import { ArrowLeft } from "lucide-react";
-import { useFindings, useProjects, useProjectPentesters } from "@/lib/data";
+import { useCompanies, useFindings, useProjects, useProjectPentesters } from "@/lib/data";
 import { MetricCard, EmptyState } from "@/components/metric-card";
 import { SeverityBadge, StatusBadge, ProjectStatusBadge } from "@/components/badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { OPEN_STATUSES, formatDate, projectTypeLabel } from "@/lib/vuln";
+import {
+  OPEN_STATUSES,
+  PROJECT_STATUSES,
+  PROJECT_TYPES,
+  formatDate,
+  projectStatusLabel,
+  projectTypeLabel,
+  type ProjectStatus,
+  type ProjectType,
+} from "@/lib/vuln";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({
@@ -33,7 +47,46 @@ function ProjectDetail() {
   const projectFindings = (findings ?? []).filter((f) => f.project_id === id);
   const members = (team ?? []).filter((t) => t.project_id === id);
 
+  const { data: companies } = useCompanies();
+  const { data: auth } = useAppAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
   if (!project) return <EmptyState title="Projeto não encontrado" />;
+  const isPentester = auth?.role === "pentester";
+
+  async function save(v: Record<string, string>) {
+    const contracted = Number((v["contracted_hours"] ?? "") || 0);
+    const used = Number((v["used_hours"] ?? "") || 0);
+    if (Number.isNaN(contracted) || Number.isNaN(used) || contracted < 0 || used < 0)
+      return "Horas inválidas";
+    const { error } = await supabase
+      .from("projects")
+      .update({
+        name: (v["name"] ?? "").trim().slice(0, 140),
+        company_id: (v["company_id"] ?? ""),
+        description: (v["description"] ?? "").trim().slice(0, 800),
+        type: (v["type"] ?? "") as ProjectType,
+        status: (v["status"] ?? "") as ProjectStatus,
+        start_date: (v["start_date"] ?? "") || null,
+        end_date: (v["end_date"] ?? "") || null,
+        contracted_hours: contracted,
+        used_hours: used,
+      })
+      .eq("id", id);
+    if (error) return error.message;
+    toast.success("Projeto atualizado");
+    void queryClient.invalidateQueries();
+    return null;
+  }
+
+  async function remove() {
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) return void toast.error(error.message);
+    toast.success("Projeto excluído");
+    await queryClient.invalidateQueries();
+    void navigate({ to: "/projects" });
+  }
 
   const pct = project.contracted_hours
     ? Math.min(100, Math.round((project.used_hours / project.contracted_hours) * 100))
@@ -55,8 +108,38 @@ function ProjectDetail() {
             {formatDate(project.end_date)}
           </p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <ProjectStatusBadge status={project.status} />
+          {isPentester ? (
+            <>
+              <EditDialog
+                title="Editar projeto"
+                initial={project}
+                onSave={save}
+                fields={[
+                  { key: "name", label: "Nome", type: "text", required: true },
+                  {
+                    key: "company_id",
+                    label: "Empresa",
+                    type: "select",
+                    required: true,
+                    options: (companies ?? []).map((c) => ({ value: c.id, label: c.name })),
+                  },
+                  { key: "description", label: "Descrição / escopo", type: "textarea" },
+                  { key: "type", label: "Tipo", type: "select", options: toOptions(PROJECT_TYPES, projectTypeLabel) },
+                  { key: "status", label: "Status", type: "select", options: toOptions(PROJECT_STATUSES, projectStatusLabel) },
+                  { key: "start_date", label: "Início", type: "date" },
+                  { key: "end_date", label: "Fim", type: "date" },
+                  { key: "contracted_hours", label: "Horas contratadas", type: "number" },
+                  { key: "used_hours", label: "Horas utilizadas", type: "number" },
+                ]}
+              />
+              <DeleteButton
+                description="Isso excluirá o projeto e todos os seus findings e evidências."
+                onConfirm={remove}
+              />
+            </>
+          ) : null}
         </div>
       </div>
 

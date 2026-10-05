@@ -1,0 +1,6 @@
+ALTER TABLE public.projects DROP CONSTRAINT projects_company_id_fkey, ADD CONSTRAINT projects_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id) ON DELETE CASCADE;
+ALTER TABLE public.findings DROP CONSTRAINT findings_project_id_fkey, ADD CONSTRAINT findings_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+ALTER TABLE public.finding_evidences DROP CONSTRAINT finding_evidences_finding_id_fkey, ADD CONSTRAINT finding_evidences_finding_id_fkey FOREIGN KEY (finding_id) REFERENCES public.findings(id) ON DELETE CASCADE;
+ALTER TABLE public.project_pentesters DROP CONSTRAINT project_pentesters_project_id_fkey, ADD CONSTRAINT project_pentesters_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+ALTER TABLE public.profiles DROP CONSTRAINT profiles_company_id_fkey, ADD CONSTRAINT profiles_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id) ON DELETE SET NULL;
+ALTER TABLE public.demo_accounts DROP CONSTRAINT demo_accounts_company_id_fkey, ADD CONSTRAINT demo_accounts_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id) ON DELETE SET NULL;

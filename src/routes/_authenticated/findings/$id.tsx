@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { EditDialog, DeleteButton, toOptions } from "@/components/crud-actions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppAuth } from "@/hooks/use-app-auth";
-import { useFindings } from "@/lib/data";
+import { useFindings, usePentesters, useProjects } from "@/lib/data";
 import { EmptyState } from "@/components/metric-card";
 import { SeverityBadge, StatusBadge } from "@/components/badges";
 import { Button } from "@/components/ui/button";
@@ -23,9 +24,12 @@ import {
 import {
   FINDING_STATUSES,
   RESOLVED_STATUSES,
+  SEVERITIES,
   formatDate,
+  severityLabel,
   statusLabel,
   type FindingStatus,
+  type Severity,
 } from "@/lib/vuln";
 
 export const Route = createFileRoute("/_authenticated/findings/$id")({
@@ -79,6 +83,10 @@ function FindingDetail() {
     },
   });
 
+  const { data: projects } = useProjects();
+  const { data: pentesters } = usePentesters();
+  const navigate = useNavigate();
+
   if (!detail || !summary) return <EmptyState title="Finding não encontrado" />;
 
   const isPentester = auth?.role === "pentester";
@@ -98,6 +106,58 @@ function FindingDetail() {
     toast.success("Status atualizado");
     void queryClient.invalidateQueries({ queryKey: ["findings"] });
     void queryClient.invalidateQueries({ queryKey: ["finding", id] });
+  }
+
+  async function saveFinding(v: Record<string, string>) {
+    const cvss = Number((v["cvss"] ?? "") || 0);
+    if (Number.isNaN(cvss) || cvss < 0 || cvss > 10) return "CVSS deve estar entre 0 e 10";
+    const { error } = await supabase
+      .from("findings")
+      .update({
+        title: (v["title"] ?? "").trim().slice(0, 200),
+        project_id: (v["project_id"] ?? ""),
+        severity: (v["severity"] ?? "") as Severity,
+        status: (v["status"] ?? "") as FindingStatus,
+        cvss,
+        description: (v["description"] ?? "").slice(0, 8000),
+        impact: (v["impact"] ?? "").slice(0, 4000),
+        mitigation: (v["mitigation"] ?? "").slice(0, 4000),
+        ...(v["discovered_at"] ? { discovered_at: v["discovered_at"] } : {}),
+        resolved_at: (v["resolved_at"] ?? "") || null,
+        pentester_id: (v["pentester_id"] ?? "") || null,
+      })
+      .eq("id", id);
+    if (error) return error.message;
+    toast.success("Finding atualizado");
+    void queryClient.invalidateQueries();
+    return null;
+  }
+
+  async function removeFinding() {
+    const { error } = await supabase.from("findings").delete().eq("id", id);
+    if (error) return void toast.error(error.message);
+    toast.success("Finding excluído");
+    await queryClient.invalidateQueries();
+    void navigate({ to: "/findings" });
+  }
+
+  async function saveEvidence(evId: string, v: Record<string, string>) {
+    if (!(v["content"] ?? "").trim()) return "Informe o conteúdo";
+    const { error } = await supabase
+      .from("finding_evidences")
+      .update({ caption: (v["caption"] ?? "").slice(0, 200), content: (v["content"] ?? "").slice(0, 4000) })
+      .eq("id", evId);
+    if (error) return error.message;
+    toast.success("Evidência atualizada");
+    void queryClient.invalidateQueries({ queryKey: ["evidences", id] });
+    return null;
+  }
+
+  async function removeEvidence(evId: string) {
+    const { error } = await supabase.from("finding_evidences").delete().eq("id", evId);
+    if (error) return void toast.error(error.message);
+    toast.success("Evidência excluída");
+    void queryClient.invalidateQueries({ queryKey: ["evidences", id] });
   }
 
   async function addEvidence() {
@@ -143,6 +203,43 @@ function FindingDetail() {
           <span className="rounded-md border border-border px-2 py-1 text-xs tabular-nums">
             CVSS {Number(detail.cvss).toFixed(1)}
           </span>
+          {isPentester ? (
+            <>
+              <EditDialog
+                title="Editar finding"
+                initial={detail}
+                onSave={saveFinding}
+                fields={[
+                  { key: "title", label: "Título", type: "text", required: true },
+                  {
+                    key: "project_id",
+                    label: "Projeto",
+                    type: "select",
+                    required: true,
+                    options: (projects ?? []).map((p) => ({ value: p.id, label: p.name })),
+                  },
+                  { key: "severity", label: "Severidade", type: "select", options: toOptions(SEVERITIES, severityLabel) },
+                  { key: "status", label: "Status", type: "select", options: toOptions(FINDING_STATUSES, statusLabel) },
+                  { key: "cvss", label: "CVSS (0–10)", type: "number" },
+                  {
+                    key: "pentester_id",
+                    label: "Pentester responsável",
+                    type: "select",
+                    options: (pentesters ?? []).map((p) => ({ value: p.id, label: p.full_name || p.email })),
+                  },
+                  { key: "discovered_at", label: "Descoberto em", type: "date" },
+                  { key: "resolved_at", label: "Remediado em", type: "date" },
+                  { key: "description", label: "Descrição técnica", type: "textarea" },
+                  { key: "impact", label: "Impacto", type: "textarea" },
+                  { key: "mitigation", label: "Mitigação", type: "textarea" },
+                ]}
+              />
+              <DeleteButton
+                description="Isso excluirá o finding e todas as suas evidências."
+                onConfirm={removeFinding}
+              />
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -208,7 +305,28 @@ function FindingDetail() {
           {(evidences ?? []).length ? (
             (evidences ?? []).map((e) => (
               <div key={e.id} className="rounded-md border border-border p-3">
-                <p className="text-xs font-medium">{e.caption || "Evidência"}</p>
+                <div className="flex items-center gap-1">
+                  <p className="flex-1 text-xs font-medium">{e.caption || "Evidência"}</p>
+                  {isPentester ? (
+                    <>
+                      <EditDialog
+                        size="icon"
+                        title="Editar evidência"
+                        initial={e}
+                        onSave={(v) => saveEvidence(e.id, v)}
+                        fields={[
+                          { key: "caption", label: "Legenda", type: "text" },
+                          { key: "content", label: "Conteúdo", type: "textarea", required: true },
+                        ]}
+                      />
+                      <DeleteButton
+                        size="icon"
+                        description="Excluir esta evidência?"
+                        onConfirm={() => removeEvidence(e.id)}
+                      />
+                    </>
+                  ) : null}
+                </div>
                 <pre className="mt-1 overflow-x-auto whitespace-pre-wrap font-mono text-xs text-muted-foreground">
                   {e.content}
                 </pre>

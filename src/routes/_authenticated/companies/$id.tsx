@@ -1,4 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAppAuth } from "@/hooks/use-app-auth";
+import { EditDialog, DeleteButton } from "@/components/crud-actions";
 import { ArrowLeft } from "lucide-react";
 import { useCompanies, useFindings, useProjects } from "@/lib/data";
 import { MetricCard, EmptyState } from "@/components/metric-card";
@@ -34,7 +39,36 @@ function CompanyDetail() {
   const projectIds = new Set(companyProjects.map((p) => p.id));
   const companyFindings = (findings ?? []).filter((f) => projectIds.has(f.project_id));
 
+  const { data: auth } = useAppAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
   if (!company) return <EmptyState title="Empresa não encontrada" />;
+  const isPentester = auth?.role === "pentester";
+
+  async function save(v: Record<string, string>) {
+    const { error } = await supabase
+      .from("companies")
+      .update({
+        name: (v["name"] ?? "").trim().slice(0, 120),
+        identifier: (v["identifier"] ?? "").trim().slice(0, 40),
+        description: (v["description"] ?? "").trim().slice(0, 600),
+        status: (v["status"] ?? "") as "active" | "inactive",
+      })
+      .eq("id", id);
+    if (error) return error.message;
+    toast.success("Empresa atualizada");
+    void queryClient.invalidateQueries();
+    return null;
+  }
+
+  async function remove() {
+    const { error } = await supabase.from("companies").delete().eq("id", id);
+    if (error) return void toast.error(error.message);
+    toast.success("Empresa excluída");
+    await queryClient.invalidateQueries();
+    void navigate({ to: "/companies" });
+  }
 
   return (
     <div className="space-y-5">
@@ -50,6 +84,33 @@ function CompanyDetail() {
             {company.identifier || "sem identificador"} · {company.description}
           </p>
         </div>
+        {isPentester ? (
+          <div className="ml-auto flex gap-2">
+            <EditDialog
+              title="Editar empresa"
+              initial={company}
+              onSave={save}
+              fields={[
+                { key: "name", label: "Nome", type: "text", required: true },
+                { key: "identifier", label: "Identificador", type: "text" },
+                { key: "description", label: "Descrição", type: "textarea" },
+                {
+                  key: "status",
+                  label: "Status",
+                  type: "select",
+                  options: [
+                    { value: "active", label: "Ativa" },
+                    { value: "inactive", label: "Inativa" },
+                  ],
+                },
+              ]}
+            />
+            <DeleteButton
+              description="Isso excluirá a empresa e todos os seus projetos, findings e evidências."
+              onConfirm={remove}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
