@@ -30,12 +30,14 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-const DEMO_PASSWORD = "demo1234";
+// RNF04: a senha das contas de demonstração vem do ambiente (VITE_DEMO_PASSWORD).
+const DEMO_PASSWORD = (import.meta.env["VITE_DEMO_PASSWORD"] as string | undefined) ?? "";
 
 const demoUsers = [
   { email: "pentester@example.com", label: "Pentester (Ana Ribeiro)", hint: "Acesso global" },
   { email: "cliente.alpha@example.com", label: "Cliente Alpha", hint: "Somente Empresa Alpha" },
   { email: "cliente.beta@example.com", label: "Cliente Beta", hint: "Somente Empresa Beta" },
+  { email: "cliente.gamma@example.com", label: "Cliente Gamma", hint: "Somente Empresa Gamma" },
 ];
 
 const schema = z.object({
@@ -55,34 +57,24 @@ function AuthPage() {
     setError(null);
     setLoading(mail);
     try {
-      let { error: signInError } = await supabase.auth.signInWithPassword({
+      // RF01: contas são provisionadas previamente pelo servidor; não há
+      // cadastro público, então aqui só existe autenticação.
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: mail,
         password: pass,
       });
-
       if (signInError) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: mail,
-          password: pass,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (signUpError) {
-          setError(signInError.message);
-          return;
-        }
-        ({ error: signInError } = await supabase.auth.signInWithPassword({
-          email: mail,
-          password: pass,
-        }));
-        if (signInError) {
-          setError(signInError.message);
-          return;
-        }
+        setError(
+          signInError.message === "Invalid login credentials"
+            ? "E-mail ou senha incorretos."
+            : signInError.message,
+        );
+        return;
       }
 
       await supabase.rpc("bootstrap_current_user");
       await queryClient.invalidateQueries();
-      toast.success("Bem-vindo de volta");
+      toast.success("Sessão iniciada");
       navigate({ to: "/dashboard", replace: true });
     } finally {
       setLoading(null);
@@ -115,7 +107,7 @@ function AuthPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Entrar</CardTitle>
-            <CardDescription>Use uma conta de demonstração ou suas credenciais.</CardDescription>
+            <CardDescription>Informe as credenciais fornecidas pela equipe VulnDesk.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={onSubmit} className="space-y-4">
@@ -150,6 +142,7 @@ function AuthPage() {
           </CardContent>
         </Card>
 
+        {DEMO_PASSWORD ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Acesso rápido de demonstração</CardTitle>
@@ -173,6 +166,7 @@ function AuthPage() {
             ))}
           </CardContent>
         </Card>
+        ) : null}
       </div>
     </div>
   );

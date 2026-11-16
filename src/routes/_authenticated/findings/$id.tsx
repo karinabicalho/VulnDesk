@@ -1,18 +1,17 @@
-import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { EditDialog, DeleteButton, toOptions } from "@/components/crud-actions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Paperclip } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { EvidenceSection } from "@/components/evidence-section";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { removeEvidenceFiles } from "@/lib/storage";
 import { useAppAuth } from "@/hooks/use-app-auth";
 import { useFindings, usePentesters, useProjects } from "@/lib/data";
 import { EmptyState } from "@/components/metric-card";
 import { SeverityBadge, StatusBadge } from "@/components/badges";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -52,8 +51,6 @@ function FindingDetail() {
   const { data: auth } = useAppAuth();
   const { data: findings } = useFindings();
   const queryClient = useQueryClient();
-  const [caption, setCaption] = useState("");
-  const [content, setContent] = useState("");
 
   const summary = findings?.find((f) => f.id === id);
 
@@ -67,19 +64,6 @@ function FindingDetail() {
         .maybeSingle();
       if (error) throw error;
       return data;
-    },
-  });
-
-  const { data: evidences } = useQuery({
-    queryKey: ["evidences", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("finding_evidences")
-        .select("*")
-        .eq("finding_id", id)
-        .order("created_at");
-      if (error) throw error;
-      return data ?? [];
     },
   });
 
@@ -134,51 +118,12 @@ function FindingDetail() {
   }
 
   async function removeFinding() {
+    await removeEvidenceFiles({ findingIds: [id] });
     const { error } = await supabase.from("findings").delete().eq("id", id);
     if (error) return void toast.error(error.message);
     toast.success("Finding excluído");
     await queryClient.invalidateQueries();
     void navigate({ to: "/findings" });
-  }
-
-  async function saveEvidence(evId: string, v: Record<string, string>) {
-    if (!(v["content"] ?? "").trim()) return "Informe o conteúdo";
-    const { error } = await supabase
-      .from("finding_evidences")
-      .update({ caption: (v["caption"] ?? "").slice(0, 200), content: (v["content"] ?? "").slice(0, 4000) })
-      .eq("id", evId);
-    if (error) return error.message;
-    toast.success("Evidência atualizada");
-    void queryClient.invalidateQueries({ queryKey: ["evidences", id] });
-    return null;
-  }
-
-  async function removeEvidence(evId: string) {
-    const { error } = await supabase.from("finding_evidences").delete().eq("id", evId);
-    if (error) return void toast.error(error.message);
-    toast.success("Evidência excluída");
-    void queryClient.invalidateQueries({ queryKey: ["evidences", id] });
-  }
-
-  async function addEvidence() {
-    if (!content.trim()) {
-      toast.error("Informe o conteúdo da evidência");
-      return;
-    }
-    const { error } = await supabase.from("finding_evidences").insert({
-      finding_id: id,
-      caption: caption.slice(0, 200),
-      content: content.slice(0, 4000),
-      type: "text",
-    });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setCaption("");
-    setContent("");
-    toast.success("Evidência adicionada");
-    void queryClient.invalidateQueries({ queryKey: ["evidences", id] });
   }
 
   return (
@@ -295,69 +240,7 @@ function FindingDetail() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Paperclip className="size-4" /> Evidências
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {(evidences ?? []).length ? (
-            (evidences ?? []).map((e) => (
-              <div key={e.id} className="rounded-md border border-border p-3">
-                <div className="flex items-center gap-1">
-                  <p className="flex-1 text-xs font-medium">{e.caption || "Evidência"}</p>
-                  {isPentester ? (
-                    <>
-                      <EditDialog
-                        size="icon"
-                        title="Editar evidência"
-                        initial={e}
-                        onSave={(v) => saveEvidence(e.id, v)}
-                        fields={[
-                          { key: "caption", label: "Legenda", type: "text" },
-                          { key: "content", label: "Conteúdo", type: "textarea", required: true },
-                        ]}
-                      />
-                      <DeleteButton
-                        size="icon"
-                        description="Excluir esta evidência?"
-                        onConfirm={() => removeEvidence(e.id)}
-                      />
-                    </>
-                  ) : null}
-                </div>
-                <pre className="mt-1 overflow-x-auto whitespace-pre-wrap font-mono text-xs text-muted-foreground">
-                  {e.content}
-                </pre>
-              </div>
-            ))
-          ) : (
-            <EmptyState title="Nenhuma evidência anexada" />
-          )}
-
-          {isPentester ? (
-            <div className="space-y-2 border-t border-border pt-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="cap">Legenda</Label>
-                <Input id="cap" value={caption} onChange={(e) => setCaption(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cont">Conteúdo (log, payload, request)</Label>
-                <Textarea
-                  id="cont"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="font-mono text-xs"
-                />
-              </div>
-              <Button size="sm" onClick={() => void addEvidence()}>
-                Adicionar evidência
-              </Button>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+      <EvidenceSection findingId={id} canEdit={isPentester} />
     </div>
   );
 }

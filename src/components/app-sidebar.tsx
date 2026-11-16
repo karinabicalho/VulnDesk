@@ -8,6 +8,7 @@ import {
   ShieldAlert,
   LogOut,
   ChevronDown,
+  UserCog,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,17 +40,25 @@ const pentesterItems = [
   { title: "Projetos", url: "/projects", icon: FolderKanban },
   { title: "Findings", url: "/findings", icon: Bug },
   { title: "Pentesters", url: "/pentesters", icon: Users },
-] as const;
+];
+
+const adminItems = [{ title: "Usuários", url: "/users", icon: UserCog }];
 
 const clientItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Projetos", url: "/projects", icon: FolderKanban },
   { title: "Findings", url: "/findings", icon: Bug },
-] as const;
+];
+
+export function roleLabel(auth: AppAuth) {
+  if (auth.isAdmin) return "Administrador";
+  return auth.role === "pentester" ? "Pentester" : `Cliente${auth.companyName ? ` · ${auth.companyName}` : ""}`;
+}
 
 export function AppSidebar({ auth }: { auth: AppAuth }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items = auth.role === "pentester" ? pentesterItems : clientItems;
+  const items =
+    auth.role === "pentester" ? [...pentesterItems, ...(auth.isAdmin ? adminItems : [])] : clientItems;
 
   return (
     <Sidebar collapsible="icon">
@@ -123,7 +132,7 @@ export function UserMenu({ auth }: { auth: AppAuth }) {
           <span className="hidden text-left sm:block">
             <span className="block text-xs font-medium leading-tight">{auth.fullName}</span>
             <span className="block text-[11px] leading-tight text-muted-foreground">
-              {auth.role === "pentester" ? "Pentester" : "Cliente"}
+              {roleLabel(auth)}
             </span>
           </span>
           <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -133,6 +142,7 @@ export function UserMenu({ auth }: { auth: AppAuth }) {
         <DropdownMenuLabel>
           <p className="text-sm">{auth.fullName}</p>
           <p className="text-xs font-normal text-muted-foreground">{auth.email}</p>
+          <p className="mt-1 text-[11px] font-normal text-primary">{roleLabel(auth)}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={signOut}>

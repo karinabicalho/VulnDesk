@@ -22,6 +22,7 @@ const titles: Record<string, string> = {
   "/projects": "Projetos",
   "/findings": "Findings",
   "/pentesters": "Pentesters",
+  "/users": "Usuários",
 };
 
 function AuthenticatedLayout() {

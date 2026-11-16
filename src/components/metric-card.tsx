@@ -13,7 +13,7 @@ export function MetricCard({
   value: string | number;
   icon?: LucideIcon;
   accent?: string;
-  hint?: string;
+  hint?: string | undefined;
 }) {
   return (
     <Card className="gap-0 p-4">

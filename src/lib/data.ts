@@ -66,9 +66,18 @@ export function usePentesters() {
   return useQuery({
     queryKey: ["pentesters"],
     queryFn: async () => {
+      // Papéis ficam em tabela própria (RNF02): pentesters são os perfis com papel "pentester".
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "pentester");
+      if (rolesError) throw rolesError;
+      const ids = (roles ?? []).map((r) => r.user_id);
+      if (!ids.length) return [];
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email, company_id")
+        .select("id, user_id, full_name, email, company_id, created_at")
+        .in("user_id", ids)
         .is("company_id", null)
         .order("full_name");
       if (error) throw error;

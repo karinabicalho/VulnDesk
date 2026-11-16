@@ -13,11 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedPentestersRouteImport } from './routes/_authenticated/pentesters'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedCompaniesIndexRouteImport } from './routes/_authenticated/companies/index'
 import { Route as AuthenticatedCompaniesIdRouteImport } from './routes/_authenticated/companies/$id'
 import { Route as AuthenticatedFindingsIndexRouteImport } from './routes/_authenticated/findings/index'
 import { Route as AuthenticatedFindingsIdRouteImport } from './routes/_authenticated/findings/$id'
+import { Route as AuthenticatedPentestersIndexRouteImport } from './routes/_authenticated/pentesters/index'
+import { Route as AuthenticatedPentestersIdRouteImport } from './routes/_authenticated/pentesters/$id'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects/index'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects/$id'
 
@@ -40,9 +42,9 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedPentestersRoute = AuthenticatedPentestersRouteImport.update({
-  id: '/pentesters',
-  path: '/pentesters',
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCompaniesIndexRoute =
@@ -68,6 +70,18 @@ const AuthenticatedFindingsIdRoute = AuthenticatedFindingsIdRouteImport.update({
   path: '/findings/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPentestersIndexRoute =
+  AuthenticatedPentestersIndexRouteImport.update({
+    id: '/pentesters/',
+    path: '/pentesters/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPentestersIdRoute =
+  AuthenticatedPentestersIdRouteImport.update({
+    id: '/pentesters/$id',
+    path: '/pentesters/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjectsIndexRoute =
   AuthenticatedProjectsIndexRouteImport.update({
     id: '/projects/',
@@ -84,24 +98,28 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/pentesters': typeof AuthenticatedPentestersRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/companies/$id': typeof AuthenticatedCompaniesIdRoute
   '/findings/$id': typeof AuthenticatedFindingsIdRoute
+  '/pentesters/$id': typeof AuthenticatedPentestersIdRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/companies/': typeof AuthenticatedCompaniesIndexRoute
   '/findings/': typeof AuthenticatedFindingsIndexRoute
+  '/pentesters/': typeof AuthenticatedPentestersIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/pentesters': typeof AuthenticatedPentestersRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/companies/$id': typeof AuthenticatedCompaniesIdRoute
   '/findings/$id': typeof AuthenticatedFindingsIdRoute
+  '/pentesters/$id': typeof AuthenticatedPentestersIdRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/findings': typeof AuthenticatedFindingsIndexRoute
+  '/pentesters': typeof AuthenticatedPentestersIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
 }
 export interface FileRoutesById {
@@ -110,12 +128,14 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/pentesters': typeof AuthenticatedPentestersRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/companies/$id': typeof AuthenticatedCompaniesIdRoute
   '/_authenticated/findings/$id': typeof AuthenticatedFindingsIdRoute
+  '/_authenticated/pentesters/$id': typeof AuthenticatedPentestersIdRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/_authenticated/companies/': typeof AuthenticatedCompaniesIndexRoute
   '/_authenticated/findings/': typeof AuthenticatedFindingsIndexRoute
+  '/_authenticated/pentesters/': typeof AuthenticatedPentestersIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
 }
 export interface FileRouteTypes {
@@ -124,24 +144,28 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
-    | '/pentesters'
+    | '/users'
     | '/companies/$id'
     | '/findings/$id'
+    | '/pentesters/$id'
     | '/projects/$id'
     | '/companies/'
     | '/findings/'
+    | '/pentesters/'
     | '/projects/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/dashboard'
-    | '/pentesters'
+    | '/users'
     | '/companies/$id'
     | '/findings/$id'
+    | '/pentesters/$id'
     | '/projects/$id'
     | '/companies'
     | '/findings'
+    | '/pentesters'
     | '/projects'
   id:
     | '__root__'
@@ -149,12 +173,14 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/dashboard'
-    | '/_authenticated/pentesters'
+    | '/_authenticated/users'
     | '/_authenticated/companies/$id'
     | '/_authenticated/findings/$id'
+    | '/_authenticated/pentesters/$id'
     | '/_authenticated/projects/$id'
     | '/_authenticated/companies/'
     | '/_authenticated/findings/'
+    | '/_authenticated/pentesters/'
     | '/_authenticated/projects/'
   fileRoutesById: FileRoutesById
 }
@@ -194,11 +220,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/pentesters': {
-      id: '/_authenticated/pentesters'
-      path: '/pentesters'
-      fullPath: '/pentesters'
-      preLoaderRoute: typeof AuthenticatedPentestersRouteImport
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/companies/': {
@@ -229,6 +255,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFindingsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pentesters/': {
+      id: '/_authenticated/pentesters/'
+      path: '/pentesters'
+      fullPath: '/pentesters/'
+      preLoaderRoute: typeof AuthenticatedPentestersIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pentesters/$id': {
+      id: '/_authenticated/pentesters/$id'
+      path: '/pentesters/$id'
+      fullPath: '/pentesters/$id'
+      preLoaderRoute: typeof AuthenticatedPentestersIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projects/': {
       id: '/_authenticated/projects/'
       path: '/projects'
@@ -248,23 +288,27 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedPentestersRoute: typeof AuthenticatedPentestersRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedCompaniesIdRoute: typeof AuthenticatedCompaniesIdRoute
   AuthenticatedFindingsIdRoute: typeof AuthenticatedFindingsIdRoute
+  AuthenticatedPentestersIdRoute: typeof AuthenticatedPentestersIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedCompaniesIndexRoute: typeof AuthenticatedCompaniesIndexRoute
   AuthenticatedFindingsIndexRoute: typeof AuthenticatedFindingsIndexRoute
+  AuthenticatedPentestersIndexRoute: typeof AuthenticatedPentestersIndexRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedPentestersRoute: AuthenticatedPentestersRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedCompaniesIdRoute: AuthenticatedCompaniesIdRoute,
   AuthenticatedFindingsIdRoute: AuthenticatedFindingsIdRoute,
+  AuthenticatedPentestersIdRoute: AuthenticatedPentestersIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedCompaniesIndexRoute: AuthenticatedCompaniesIndexRoute,
   AuthenticatedFindingsIndexRoute: AuthenticatedFindingsIndexRoute,
+  AuthenticatedPentestersIndexRoute: AuthenticatedPentestersIndexRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
 }
 

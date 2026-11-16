@@ -17,6 +17,7 @@ export type Database = {
       companies: {
         Row: {
           created_at: string
+          updated_at: string
           description: string
           id: string
           identifier: string
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          updated_at?: string
           description?: string
           id?: string
           identifier?: string
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          updated_at?: string
           description?: string
           id?: string
           identifier?: string
@@ -75,6 +78,7 @@ export type Database = {
           caption: string
           content: string
           created_at: string
+          updated_at: string
           finding_id: string
           id: string
           storage_path: string | null
@@ -84,6 +88,7 @@ export type Database = {
           caption?: string
           content?: string
           created_at?: string
+          updated_at?: string
           finding_id: string
           id?: string
           storage_path?: string | null
@@ -93,6 +98,7 @@ export type Database = {
           caption?: string
           content?: string
           created_at?: string
+          updated_at?: string
           finding_id?: string
           id?: string
           storage_path?: string | null
@@ -181,6 +187,7 @@ export type Database = {
         Row: {
           company_id: string | null
           created_at: string
+          updated_at: string
           email: string
           full_name: string
           id: string
@@ -189,6 +196,7 @@ export type Database = {
         Insert: {
           company_id?: string | null
           created_at?: string
+          updated_at?: string
           email: string
           full_name?: string
           id?: string
@@ -197,6 +205,7 @@ export type Database = {
         Update: {
           company_id?: string | null
           created_at?: string
+          updated_at?: string
           email?: string
           full_name?: string
           id?: string
@@ -250,6 +259,7 @@ export type Database = {
           company_id: string
           contracted_hours: number
           created_at: string
+          updated_at: string
           description: string
           end_date: string | null
           id: string
@@ -263,6 +273,7 @@ export type Database = {
           company_id: string
           contracted_hours?: number
           created_at?: string
+          updated_at?: string
           description?: string
           end_date?: string | null
           id?: string
@@ -276,6 +287,7 @@ export type Database = {
           company_id?: string
           contracted_hours?: number
           created_at?: string
+          updated_at?: string
           description?: string
           end_date?: string | null
           id?: string
@@ -327,10 +339,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
       is_pentester: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "pentester" | "client"
+      app_role: "pentester" | "client" | "admin"
       company_status: "active" | "inactive"
       evidence_type: "image" | "file" | "text"
       finding_status:
@@ -477,7 +490,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["pentester", "client"],
+      app_role: ["pentester", "client", "admin"],
       company_status: ["active", "inactive"],
       evidence_type: ["image", "file", "text"],
       finding_status: [

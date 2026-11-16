@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { removeEvidenceFiles } from "@/lib/storage";
 import { useAppAuth } from "@/hooks/use-app-auth";
 import { EditDialog, DeleteButton } from "@/components/crud-actions";
 import { ArrowLeft } from "lucide-react";
@@ -63,6 +64,7 @@ function CompanyDetail() {
   }
 
   async function remove() {
+    await removeEvidenceFiles({ companyId: id });
     const { error } = await supabase.from("companies").delete().eq("id", id);
     if (error) return void toast.error(error.message);
     toast.success("Empresa excluída");
