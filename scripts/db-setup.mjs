@@ -15,6 +15,11 @@ import { DEMO_COMPANIES, DEMO_PROJECTS, DEMO_FINDINGS } from "./seed-data.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const env = process.env;
 
+const RENAMED_MIGRATIONS = {
+  "20260810225747_ce6fc804-1b7d-4364-9e60-bb4408a7e290.sql": "20260810225747_esquema_inicial.sql",
+  "20260810225957_a9ebb1a3-789b-4b5f-b76d-728a4367037f.sql": "20260810225957_storage_evidencias.sql",
+};
+
 const log = (...a) => console.log("[db-setup]", ...a);
 
 export function resolveDbEnv() {
@@ -44,6 +49,13 @@ async function applyMigrations(sql) {
   await sql`CREATE TABLE IF NOT EXISTS vulndesk_meta.flags (
     key text PRIMARY KEY, value text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
   await sql`REVOKE ALL ON SCHEMA vulndesk_meta FROM PUBLIC`;
+
+  // Migrações renomeadas: atualiza o registro para não reaplicá-las.
+  for (const [from, to] of Object.entries(RENAMED_MIGRATIONS)) {
+    await sql`UPDATE vulndesk_meta.migrations SET version = ${to}
+              WHERE version = ${from}
+                AND NOT EXISTS (SELECT 1 FROM vulndesk_meta.migrations WHERE version = ${to})`;
+  }
 
   const dir = join(root, "supabase", "migrations");
   const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
